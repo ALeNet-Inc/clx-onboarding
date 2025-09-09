@@ -1,0 +1,17 @@
+<?php
+function get_profile() {
+  global $pdo; $uid = $_SERVER['user_id'];
+  $stmt = $pdo->prepare('SELECT * FROM profiles WHERE user_id=?'); $stmt->execute([$uid]);
+  return ['profile' => $stmt->fetch()];
+}
+
+function update_profile() {
+  global $pdo; $uid = $_SERVER['user_id']; $in = json_input();
+  $type = in_array($in['type'] ?? '', ['individual','business']) ? $in['type'] : null;
+  if(!$type) { http_response_code(422); return ['error'=>'invalid_type']; }
+  $display = trim($in['display_name'] ?? ''); $country = strtoupper($in['country_of_residence'] ?? '');
+  $pdo->prepare('INSERT INTO profiles(user_id,type,display_name,country_of_residence) VALUES(?,?,?,?)
+                 ON DUPLICATE KEY UPDATE type=VALUES(type), display_name=VALUES(display_name), country_of_residence=VALUES(country_of_residence)')
+      ->execute([$uid,$type,$display,$country]);
+  return ['ok'=>true];
+}
